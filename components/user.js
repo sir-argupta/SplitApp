@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const validator = require('../helper/validation')
 const logger = require('../helper/logger')
 const apiAuth = require('../helper/apiAuthentication')
+const sendEmail = require('./mailer');
 
 /*
 User Registeration function
@@ -12,13 +13,13 @@ Validation: firstname, lastname not Null
             password - min 8, lowecase, uppercase, special character, numbers
 API: /users/v1/register
 */
-exports.userReg = async (req, res) => {
+exports.userReg = async(req, res) => {
     try {
         //Checking email Id exist in DB
         const user = await model.User.findOne({
-            emailId: req.body.emailId
-        })
-        //If email ID present in database thows error and retuen message
+                emailId: req.body.emailId
+            })
+            //If email ID present in database thows error and retuen message
         if (user) {
             const err = new Error("Email Id already present please login!")
             err.status = 400
@@ -26,7 +27,7 @@ exports.userReg = async (req, res) => {
         } else {
             //Accepts the inputs and create user model form req.body
             var newUser = new model.User(req.body)
-            //Performing validations
+                //Performing validations
             if (validator.emailValidation(newUser.emailId) &&
                 validator.passwordValidation(newUser.password) &&
                 validator.notNull(newUser.firstName)) {
@@ -36,6 +37,14 @@ exports.userReg = async (req, res) => {
 
                 //storing user details in DB
                 var id = await model.User.create(newUser)
+
+                // Send email notification
+                await sendEmail(newUser.emailId, 'You are on now Split App!', 'notification', {
+                    name: newUser.firstName,
+                    subject: 'Welcome to Split App!',
+                    message: `Hi, ${newUser.firstName} great to have you onboarded.`
+                });
+
                 res.status(200).json({
                     status: "Success",
                     message: "User Registeration Success",
@@ -56,7 +65,7 @@ User login function
 Accepts: email Id & Pass
 Implement Google Sign-in in the future.
 */
-exports.userLogin = async (req, res) => {
+exports.userLogin = async(req, res) => {
     try {
         //Checking email Id exist in DB 
         const user = await model.User.findOne({
@@ -100,16 +109,16 @@ This function is to view the user details
 Accepts: user email Id 
 Returns: user details (ensure password is removed)
 */
-exports.viewUser = async (req, res) => {
+exports.viewUser = async(req, res) => {
     try {
         //check if the login user is same as the requested user 
-        apiAuth.validateUser(req.user, req.body.emailId) 
+        apiAuth.validateUser(req.user, req.body.emailId)
         const user = await model.User.findOne({
             emailId: req.body.emailId
         }, {
             password: 0
         })
-        if(!user) {
+        if (!user) {
             var err = new Error("User does not exist!")
             err.status = 400
             throw err
@@ -118,7 +127,7 @@ exports.viewUser = async (req, res) => {
             status: "Success",
             user: user
         })
-    } catch(err) {
+    } catch (err) {
         logger.error(`URL : ${req.originalUrl} | staus : ${err.status} | message: ${err.message}`)
         res.status(err.status || 500).json({
             message: err.message
@@ -133,28 +142,27 @@ This function is to get all the user email Id
 Accepts: none
 Returns: all user Email ID
 */
-exports.emailList = async (req, res) => {
+exports.emailList = async(req, res) => {
     try {
         //check if the login user is same as the requested user 
-        const userEmails = await model.User.find({
-        }, {
+        const userEmails = await model.User.find({}, {
             emailId: 1,
             _id: 0
         })
-        if(!userEmails) {
+        if (!userEmails) {
             var err = new Error("User does not exist!")
             err.status = 400
             throw err
         }
-        var emailList = [] 
-        for(var email of userEmails){
+        var emailList = []
+        for (var email of userEmails) {
             emailList.push(email.emailId)
         }
         res.status(200).json({
             status: "Success",
             user: emailList
         })
-    } catch(err) {
+    } catch (err) {
         logger.error(`URL : ${req.originalUrl} | staus : ${err.status} | message: ${err.message}`)
         res.status(err.status || 500).json({
             message: err.message
@@ -168,14 +176,14 @@ Delete User function
 This function is used to delete an existing user in the database 
 Accepts: user email id 
 */
-exports.deleteUser = async (req, res) => {
+exports.deleteUser = async(req, res) => {
     try {
         //check if the login user is same as the requested user 
         apiAuth.validateUser(req.user, req.body.emailId)
         const userCheck = await validator.userValidation(req.body.emailId)
         if (!userCheck) {
             var err = new Error("User does not exist!")
-            err.status = 400 
+            err.status = 400
             throw err
         }
         const delete_response = await model.User.deleteOne({
@@ -200,7 +208,7 @@ This function is used to edit the user present in the database
 Accepts: User data (user email id can not be changed)
 This function can not be used to change the password of the user 
 */
-exports.editUser = async (req, res) => {
+exports.editUser = async(req, res) => {
     try {
         //check if the login user is same as the requested user 
         apiAuth.validateUser(req.user, req.body.emailId)
@@ -212,7 +220,7 @@ exports.editUser = async (req, res) => {
         }
         //Accepts the inputs and create user model form req.body
         var editUser = req.body
-        //Performing validations
+            //Performing validations
         if (validator.notNull(editUser.firstName) &&
             validator.notNull(editUser.lastName)) {
             //storing user details in DB
@@ -247,7 +255,7 @@ Accepts : emailId
 validation : old password is correct 
              new password meet the requirements 
 */
-exports.updatePassword = async (req, res) => {
+exports.updatePassword = async(req, res) => {
     try {
         //check if the login user is same as the requested user 
         apiAuth.validateUser(req.user, req.body.emailId)
@@ -289,6 +297,114 @@ exports.updatePassword = async (req, res) => {
     } catch (err) {
         logger.error(`URL : ${req.originalUrl} | staus : ${err.status} | message: ${err.message} ${err.stack}`)
         res.status(err.status || 500).json({
+            message: err.message
+        })
+    }
+}
+
+/*
+Add a friend directly function
+This function is used to add friend 
+Accepts : userEmail 
+          friendEmail 
+validation : both email should exist 
+             email should not have existing friends 
+*/
+
+exports.addFriend = async(req, res) => {
+    const { userEmail, friendEmail } = req.body;
+
+    try {
+        const user = await model.User.findOne({ emailId: userEmail });
+        const friend = await model.User.findOne({ emailId: friendEmail });
+
+        if (!user || !friend) {
+            var err = new Error("User or friend not found!")
+            err.status = 400
+            throw err
+        }
+
+        const existingFriendship = await model.Friendship.findOne({
+            $or: [
+                { userId: user._id, friendId: friend._id },
+                { userId: friend._id, friendId: user._id }
+            ]
+        });
+
+        if (existingFriendship) {
+            var err = new Error("Friendship already exists!")
+            err.status = 400
+            throw err
+        }
+
+        const friendship = new model.Friendship({
+            userId: user._id,
+            friendId: friend._id,
+            status: 'accepted'
+        });
+
+        const friendship_response = await friendship.save();
+        res.status(201).json({
+            status: "Success",
+            message: "Friend added",
+            response: friendship_response
+        })
+
+    } catch (err) {
+        logger.error(`URL : ${req.originalUrl} | staus : ${err.status} | message: ${err.message} ${err.stack}`)
+        res.status(err.status || 400).json({
+            message: err.message
+        })
+    }
+}
+
+
+/*
+Get all friends function 
+This function get all the friends 
+Accepts : userEmail 
+
+validation : email should exist  
+*/
+
+// Get all friends of a user
+
+exports.getFriends = async(req, res) => {
+
+    try {
+        const user = await model.User.findOne({
+            emailId: req.body.userEmail
+        })
+
+        if (!user) {
+            var err = new Error("User does not exist!")
+            err.status = 400
+            throw err
+        }
+
+        const friendships = await model.Friendship.find({
+            $or: [
+                { userId: user._id, status: 'accepted' },
+                { friendId: user._id, status: 'accepted' }
+            ]
+        }).populate('userId friendId');
+
+        const friends = friendships.map(friendship => {
+            if (friendship.userId._id.toString() === user._id.toString()) {
+                return friendship.friendId;
+            } else {
+                return friendship.userId;
+            }
+        });
+
+        res.status(200).json({
+            status: "Success",
+            message: "Friend found",
+            response: friends
+        })
+    } catch (err) {
+        logger.error(`URL : ${req.originalUrl} | staus : ${err.status} | message: ${err.message} ${err.stack}`)
+        res.status(err.status || 400).json({
             message: err.message
         })
     }

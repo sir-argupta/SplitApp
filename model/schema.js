@@ -135,7 +135,14 @@ const Settlement = new mongoose.Schema({
     }
 })
 
+const Friendship = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
+    friendId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
+    status: { type: String, default: 'accepted' }
+});
+
 module.exports.Expense = mongoose.model('expense', Expense)
 module.exports.User = mongoose.model('user', User)
 module.exports.Group = mongoose.model('group', Group)
 module.exports.Settlement = mongoose.model('settlement', Settlement)
+module.exports.Friendship = mongoose.model('friendship', Friendship)

@@ -2,23 +2,23 @@ import axios from 'axios'
 
 
 //const API = axios.create({ baseURL: 'http://localhost:3001'})
-const API = axios.create({ baseURL: ''})
+const API = axios.create({ baseURL: '' })
 
 const profile = JSON.parse(localStorage.getItem('profile'))
 
 const accessHeader = {
     headers: {
-      'Authorization': `token ${profile ? profile.accessToken : null}`
+        'Authorization': `token ${profile ? profile.accessToken : null}`
     }
-  }
+}
 
 export const loginIn = (formData) => API.post('/api/users/v1/login', formData)
 
 export const register = (formData) => API.post('/api/users/v1/register', formData)
 
-export const deleteUser = (formData) => API.delete('/api/users/v1/delete', {headers:accessHeader.headers,data:formData})
+export const deleteUser = (formData) => API.delete('/api/users/v1/delete', { headers: accessHeader.headers, data: formData })
 
-export const updatePassword = (formData) =>API.post('/api/users/v1/updatePassword', formData, accessHeader)
+export const updatePassword = (formData) => API.post('/api/users/v1/updatePassword', formData, accessHeader)
 
 export const getUser = (formData) => API.post('/api/users/v1/view', formData, accessHeader)
 
@@ -28,7 +28,7 @@ export const getUserGroups = (formData) => API.post('/api/group/v1/user', formDa
 
 export const getEmailList = () => API.get('/api/users/v1/emailList', accessHeader)
 
-export const createGroup = (formData) => API.post('/api/group/v1/add', formData,  accessHeader)
+export const createGroup = (formData) => API.post('/api/group/v1/add', formData, accessHeader)
 
 export const editGroup = (formData) => API.post('/api/group/v1/edit', formData, accessHeader)
 
@@ -40,7 +40,7 @@ export const addExpense = (formDate) => API.post('/api/expense/v1/add', formDate
 
 export const editExpense = (formDate) => API.post('/api/expense/v1/edit', formDate, accessHeader)
 
-export const deleteExpense = (formData) => API.delete('/api/expense/v1/delete', {headers:accessHeader.headers,data:formData})
+export const deleteExpense = (formData) => API.delete('/api/expense/v1/delete', { headers: accessHeader.headers, data: formData })
 
 export const getGroupCategoryExp = (formData) => API.post('/api/expense/v1/group/categoryExp', formData, accessHeader)
 
@@ -63,3 +63,7 @@ export const getExpDetails = (formData) => API.post('/api/expense/v1/view', form
 export const getSettle = (formData) => API.post('/api/group/v1/settlement', formData, accessHeader)
 
 export const makeSettle = (formData) => API.post('/api/group/v1/makeSettlement', formData, accessHeader)
+
+export const addFriend = (formData) => API.post('/api/users/v1/add-friend', { userEmail: formData.userEmail, friendEmail: formData.friendEmail }, accessHeader)
+
+export const getFriend = (formData) => API.post('/api/users/v1/friends', { userEmail: formData }, accessHeader)

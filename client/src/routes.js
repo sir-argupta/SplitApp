@@ -21,7 +21,8 @@ import Dashboard from './components/dashboard';
 import { ViewExpense } from './components/expense/viewExpense';
 import EditExpense from './components/expense/editExpense';
 import { EditGroup } from './components/groups/editGroup';
-import About from './components/about';
+import Contacts from './components/contacts';
+import ViewContact from './components/contacts/viewContact'
 
 
 export default function Router() {
@@ -46,8 +47,10 @@ export default function Router() {
           element: <ViewGroup/>},
         {path:configData.EDIT_GROUP_ROUTER_URL,
           element: <EditGroup/>},
-        // {path:configData.ABOUT_URL,
-        //   element: <About/>},
+        {path:configData.CONTACT_URL,
+          element: <Contacts/>},
+        {path:configData.VIEW_CONTACT_ROUTER_URL,
+            element: <ViewContact/>},
         {path:configData.USER_PROFILE_URL,
           element: <Profile/>}
       ]
@@ -59,7 +62,6 @@ export default function Router() {
             {path: '', element: <Login/>},
             {path: configData.REGISTER_URL, element: <Register/> },
             {path: configData.USER_DELETED_URL, element: <PageUserDeleted/>},
-            {path:configData.ABOUT_URL,element: <About/>}
         ]
     },
     {path: '*', element: <Page404/>}
