@@ -15,7 +15,7 @@ const env = process.env.NODE_ENV || 'local'
 var emailTemplatePath = './emailTemplates'
 
 if (env === 'production' || env === 'staging') {
-    emailTemplatePath = '/emailTemplates'
+    emailTemplatePath = './src/emailTemplates'
 }
 
 // Configure the email transporter
