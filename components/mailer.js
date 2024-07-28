@@ -10,6 +10,13 @@ const defaultEmail = process.env.MAIL_DEFAULT_ADDRESS
 const emailPort = process.env.MAIL_PORT
 const emailHost = process.env.MAIL_HOST
 const emailSecure = process.env.MAIL_SECURE_TOGGLE
+const env = process.env.NODE_ENV || 'local'
+
+var emailTemplatePath = './emailTemplates'
+
+if (env === 'production' || env === 'staging') {
+    emailTemplatePath = './src/emailTemplates'
+}
 
 // Configure the email transporter
 const transporter = nodemailer.createTransport({
@@ -25,13 +32,13 @@ const transporter = nodemailer.createTransport({
 // Configure Handlebars for email templates
 const hbs = create({
     extName: '.handlebars',
-    partialsDir: path.resolve(__dirname, '/emailTemplates'),
+    partialsDir: path.resolve(emailTemplatePath),
     defaultLayout: false
 });
 
 transporter.use('compile', nodemailerExpressHandlebars({
     viewEngine: hbs,
-    viewPath: path.resolve(__dirname, '/emailTemplates'),
+    viewPath: path.resolve(emailTemplatePath),
     extName: '.handlebars'
 }));
 
