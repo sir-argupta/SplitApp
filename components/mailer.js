@@ -21,13 +21,13 @@ const transporter = nodemailer.createTransport({
 // Configure Handlebars for email templates
 const hbs = create({
     extName: '.handlebars',
-    partialsDir: path.resolve('../emailTemplates'),
+    partialsDir: path.resolve('./emailTemplates'),
     defaultLayout: false
 });
 
 transporter.use('compile', nodemailerExpressHandlebars({
     viewEngine: hbs,
-    viewPath: path.resolve('../emailTemplates'),
+    viewPath: path.resolve('./emailTemplates'),
     extName: '.handlebars'
 }));
 
