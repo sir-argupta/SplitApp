@@ -7,11 +7,15 @@ var dotenv = require('dotenv')
 const username = process.env.MAIL_USERNAME
 const password = process.env.MAIL_PASSWORD
 const defaultEmail = process.env.MAIL_DEFAULT_ADDRESS
-    // Configure the email transporter
+const emailPort = process.env.MAIL_PORT
+const emailHost = process.env.MAIL_HOST
+const emailSecure = process.env.MAIL_SECURE_TOGGLE
+
+// Configure the email transporter
 const transporter = nodemailer.createTransport({
-    host: 'mail.roopanjalee.in',
-    port: 587, // Use the appropriate port for your SMTP server
-    secure: false, // Set to true if using port 465
+    host: emailHost,
+    port: emailPort, // Use the appropriate port for your SMTP server
+    secure: emailSecure, // Set to true if using port 465
     auth: {
         user: username,
         pass: password
