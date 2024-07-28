@@ -7,6 +7,8 @@ var dotenv = require('dotenv')
 const username = process.env.MAIL_USERNAME
 const password = process.env.MAIL_PASSWORD
 const defaultEmail = process.env.MAIL_DEFAULT_ADDRESS
+const emailPort = process.env.MAIL_PORT || 465
+const emailHost = process.env.MAIL_HOST
 const env = process.env.NODE_ENV || 'local'
 
 var emailTemplatePath = './emailTemplates'
@@ -17,8 +19,8 @@ if (env === 'production' || env === 'staging') {
 
 // Configure the email transporter
 const transporter = nodemailer.createTransport({
-    host: 'mail.roopanjalee.in',
-    port: 465, // Use the appropriate port for your SMTP server
+    host: emailHost,
+    port: emailPort, // Use the appropriate port for your SMTP server
     secure: true, // Set to true if using port 465
     auth: {
         type: 'LOGIN',
