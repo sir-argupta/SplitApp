@@ -28,7 +28,6 @@ if (env === 'production' || env === 'staging') {
     app.get('*', (req, res) => {
         res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
     });
-    console.log(path.resolve(__dirname, 'client', 'build', 'index.html'))
 }
 
 //To detect and log invalid api hits 
