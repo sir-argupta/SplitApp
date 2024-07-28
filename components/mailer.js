@@ -24,6 +24,7 @@ const transporter = nodemailer.createTransport({
     port: emailPort, // Use the appropriate port for your SMTP server
     secure: emailSecure, // Set to true if using port 465
     auth: {
+        type: 'LOGIN',
         user: username,
         pass: password
     }
