@@ -3,13 +3,13 @@ import { Box, Button, Chip, Container, FormControl, FormHelperText, Grid, InputL
 import { Form, FormikProvider, useFormik } from 'formik';
 import { useEffect, useState } from 'react';
 import * as Yup from 'yup';
-import { getEmailList } from '../../services/auth';
 import Loading from '../loading';
 import useResponsive from '../../theme/hooks/useResponsive';
 import {  editGroupService, getGroupDetailsService } from '../../services/groupServices';
 import AlertBanner from '../AlertBanner';
 import configData from '../../config.json'
 import {  useNavigate, useParams } from 'react-router-dom';
+import { getUserContactService } from '../../services/friendsServices'
 
 
 export const EditGroup = () => {
@@ -68,10 +68,8 @@ export const EditGroup = () => {
     useEffect(() => {
         const getEmails = async () => {
             setLoading(true)
-            const response = await getEmailList()
-            var list = response.data.user
-            list.indexOf(currentUser) > -1 && list.splice(list.indexOf(currentUser), 1)
-            setEmailList(list)
+            const response_friend = await getUserContactService(currentUser)
+            setEmailList(response_friend.data.response)
             const groupIdJson = {
                 id: params.groupId
             }
@@ -148,10 +146,10 @@ export const EditGroup = () => {
                                         >
                                             {emailList.map((email) => (
                                                 <MenuItem
-                                                    key={email}
-                                                    value={email}
+                                                    key={email.emailId}
+                                                    value={email.emailId}
                                                 >
-                                                    {email}
+                                                    {email.emailId}
                                                 </MenuItem>
                                             ))}
                                         </Select>

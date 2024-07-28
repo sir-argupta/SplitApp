@@ -46,7 +46,7 @@ transporter.use('compile', nodemailerExpressHandlebars({
 const sendEmail = (to, subject, template, context) => {
     const mailOptions = {
         from: defaultEmail,
-        to,
+        to: to.join(','),
         subject,
         template,
         context

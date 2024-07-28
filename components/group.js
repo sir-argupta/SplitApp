@@ -2,6 +2,7 @@ const model = require('../model/schema')
 const validator = require('../helper/validation')
 const logger = require('../helper/logger')
 const splitCalculator = require('../helper/split')
+const sendEmail = require('./mailer');
 
 /*
 Create Group Function This function basically create new groups
@@ -13,10 +14,10 @@ Validation: Group Name not empty
             Group Members present in DB
             Currency type INR, USD, EUR (for now)
 */
-exports.createGroup = async (req, res) => {
+exports.createGroup = async(req, res) => {
     try {
         var newGroup = new model.Group(req.body)
-        //Performing validation on the input
+            //Performing validation on the input
         if (validator.notNull(newGroup.groupName) &&
             validator.currencyValidation(newGroup.groupCurrency)) {
 
@@ -54,6 +55,19 @@ exports.createGroup = async (req, res) => {
             }
 
             var id = await model.Group.create(newGroup)
+
+            // Send email notification
+            await sendEmail([newGroup.groupOwner], 'Group Created Successfully', 'notification', {
+                name: ownerCheck.firstName,
+                subject: 'Group Created Successfully',
+                message: `Hello ${ownerCheck.firstName}, your group ${newGroup.groupName} has been created successfully.`
+            });
+            await sendEmail(newGroup.groupMembers, 'Added to Group Successfully', 'notification', {
+                name: 'SplitApp User',
+                subject: 'Added to Group Successfully',
+                message: `Hello Members, your're added to ${newGroup.groupName} group successfully.!`
+            });
+
             res.status(200).json({
                 status: "Success",
                 message: "Group Creation Success",
@@ -75,7 +89,7 @@ This function is used to display the group details
 Accepts: Group Id 
 Returns: Group Info 
 */
-exports.viewGroup = async (req, res) => {
+exports.viewGroup = async(req, res) => {
     try {
         const group = await model.Group.findOne({
             _id: req.body.id
@@ -89,7 +103,7 @@ exports.viewGroup = async (req, res) => {
             status: "Success",
             group: group,
         })
-    } catch(err) {
+    } catch (err) {
         logger.error(`URL : ${req.originalUrl} | staus : ${err.status} | message: ${err.message}`)
         res.status(err.status || 500).json({
             message: err.message
@@ -103,7 +117,7 @@ This function is basically to display the list of group that a user belongs
 Accepts: user email ID
 Validation: email Id present in DB
 */
-exports.findUserGroup = async (req, res) => {
+exports.findUserGroup = async(req, res) => {
     try {
         const user = await model.User.findOne({
             emailId: req.body.emailId
@@ -136,7 +150,7 @@ This function is to edit the already existing group to make changes.
 Accepts: Group Id
         Modified group info
 */
-exports.editGroup = async (req, res) => {
+exports.editGroup = async(req, res) => {
     try {
         var group = await model.Group.findOne({
             _id: req.body.id
@@ -192,6 +206,14 @@ exports.editGroup = async (req, res) => {
                     split: editGroup.split
                 }
             })
+
+            // Send email notification
+            await sendEmail(editGroup.groupMembers, 'Group Edited Successfully', 'notification', {
+                name: 'SplitApp User',
+                subject: 'Group Edited Successfully',
+                message: `Hello Members, your group ${editGroup.groupName} has been edited successfully..!`
+            });
+
             res.status(200).json({
                 status: "Success",
                 message: "Group updated successfully!",
@@ -212,7 +234,7 @@ This function is used to delete the existing group
 Accepts: Group Id
 Validation: exisitng group Id
 */
-exports.deleteGroup = async (req, res) => {
+exports.deleteGroup = async(req, res) => {
     try {
         const group = await model.Group.findOne({
             _id: req.body.id
@@ -244,8 +266,8 @@ Make Settlement Function
 This function is used to make the settlements in the gorup 
 
 */
-exports.makeSettlement = async(req, res) =>{
-    try{
+exports.makeSettlement = async(req, res) => {
+    try {
         var reqBody = new model.Settlement(req.body)
         validator.notNull(reqBody.groupId)
         validator.notNull(reqBody.settleTo)
@@ -260,21 +282,27 @@ exports.makeSettlement = async(req, res) =>{
             err.status = 400
             throw err
         }
-       
-       group.split[0][req.body.settleFrom] += req.body.settleAmount
-       group.split[0][req.body.settleTo] -= req.body.settleAmount
 
-       var id = await model.Settlement.create(reqBody)
-       var update_response = await model.Group.updateOne({_id: group._id}, {$set:{split: group.split}})
-        
+        group.split[0][req.body.settleFrom] += req.body.settleAmount
+        group.split[0][req.body.settleTo] -= req.body.settleAmount
 
-       res.status(200).json({
-        message: "Settlement successfully!",
-        status: "Success",
-        update: update_response,
-        response: id
-    })
-    }catch (err) {
+        var id = await model.Settlement.create(reqBody)
+        var update_response = await model.Group.updateOne({ _id: group._id }, { $set: { split: group.split } })
+
+        // Send email notification
+        await sendEmail([reqBody.settleTo, reqBody.settleFrom], 'Settlement Amount', 'notification', {
+            name: 'SplitApp User',
+            subject: 'Settlement Amount',
+            message: `Hello Members, the settlement amount is ${reqBody.settleAmount} on ${reqBody.settleDate} for group ${group.groupName} ..!`
+        });
+
+        res.status(200).json({
+            message: "Settlement successfully!",
+            status: "Success",
+            update: update_response,
+            response: id
+        })
+    } catch (err) {
         logger.error(`URL : ${req.originalUrl} | staus : ${err.status} | message: ${err.message}`)
         res.status(err.status || 500).json({
             message: err.message
@@ -294,27 +322,26 @@ Accepts gorupId
 it will add split to the owner and deduct from the remaining members 
 This function is not a direct API hit - it is called by add expense function 
 */
-exports.addSplit = async (groupId, expenseAmount, expenseOwner, expenseMembers) => {
+exports.addSplit = async(groupId, expenseAmount, expenseOwner, expenseMembers) => {
     var group = await model.Group.findOne({
         _id: groupId
     })
     group.groupTotal += expenseAmount
     group.split[0][expenseOwner] += expenseAmount
     expensePerPerson = expenseAmount / expenseMembers.length
-    expensePerPerson = Math.round((expensePerPerson  + Number.EPSILON) * 100) / 100;
+    expensePerPerson = Math.round((expensePerPerson + Number.EPSILON) * 100) / 100;
     //Updating the split values per user 
     for (var user of expenseMembers) {
         group.split[0][user] -= expensePerPerson
     }
-    
+
     //Nullifying split - check if the group balance is zero else added the diff to owner 
-    let bal=0
-    for(val of Object.entries(group.split[0]))
-    {
+    let bal = 0
+    for (val of Object.entries(group.split[0])) {
         bal += val[1]
     }
     group.split[0][expenseOwner] -= bal
-    group.split[0][expenseOwner] = Math.round((group.split[0][expenseOwner]  + Number.EPSILON) * 100) / 100;
+    group.split[0][expenseOwner] = Math.round((group.split[0][expenseOwner] + Number.EPSILON) * 100) / 100;
     //Updating back the split values to the gorup 
     return await model.Group.updateOne({
         _id: groupId
@@ -327,27 +354,26 @@ This function is used to clear the split caused due to a prev expense
 This is used guring edit expense or delete expense operation 
 Works in the reverse of addSplit function 
 */
-exports.clearSplit = async (groupId, expenseAmount, expenseOwner, expenseMembers) => {
+exports.clearSplit = async(groupId, expenseAmount, expenseOwner, expenseMembers) => {
     var group = await model.Group.findOne({
         _id: groupId
     })
     group.groupTotal -= expenseAmount
     group.split[0][expenseOwner] -= expenseAmount
     expensePerPerson = expenseAmount / expenseMembers.length
-    expensePerPerson = Math.round((expensePerPerson  + Number.EPSILON) * 100) / 100;
+    expensePerPerson = Math.round((expensePerPerson + Number.EPSILON) * 100) / 100;
     //Updating the split values per user 
     for (var user of expenseMembers) {
         group.split[0][user] += expensePerPerson
     }
 
     //Nullifying split - check if the group balance is zero else added the diff to owner 
-    let bal=0
-    for(val of Object.entries(group.split[0]))
-    {
+    let bal = 0
+    for (val of Object.entries(group.split[0])) {
         bal += val[1]
     }
     group.split[0][expenseOwner] -= bal
-    group.split[0][expenseOwner] = Math.round((group.split[0][expenseOwner]  + Number.EPSILON) * 100) / 100;
+    group.split[0][expenseOwner] = Math.round((group.split[0][expenseOwner] + Number.EPSILON) * 100) / 100;
     //Updating back the split values to the gorup 
     return await model.Group.updateOne({
         _id: groupId
@@ -361,7 +387,7 @@ This function is used to calculate the balnce sheet in a group, who owes whom
 Accepts : group Id 
 return : group settlement detals
 */
-exports.groupBalanceSheet = async(req, res) =>{
+exports.groupBalanceSheet = async(req, res) => {
     try {
         const group = await model.Group.findOne({
             _id: req.body.id

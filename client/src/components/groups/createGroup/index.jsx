@@ -3,13 +3,12 @@ import { Box, Chip, Container, FormControl, FormHelperText, Grid, InputLabel, Me
 import { Form, FormikProvider, useFormik } from 'formik';
 import { useEffect, useState } from 'react';
 import * as Yup from 'yup';
-import { getEmailList } from '../../../services/auth';
 import Loading from '../../loading';
 import useResponsive from '../../../theme/hooks/useResponsive';
 import { createGroupService } from '../../../services/groupServices';
 import AlertBanner from '../../AlertBanner';
 import configData from '../../../config.json'
-
+import { getUserContactService } from '../../../services/friendsServices'
 
 export default function Creategroup() {
     const mdUp = useResponsive('up', 'md');
@@ -64,10 +63,8 @@ export default function Creategroup() {
     useEffect(() => {
         const getEmails = async () => {
             setLoading(true)
-            const response = await getEmailList()
-            var list = response.data.user
-            list.indexOf(currentUser) > -1 && list.splice(list.indexOf(currentUser), 1)
-            setEmailList(list)
+            const response_friend = await getUserContactService(currentUser)
+            setEmailList(response_friend.data.response)
             setLoading(false)
         }
         getEmails()
@@ -132,10 +129,10 @@ export default function Creategroup() {
                                         >
                                             {emailList.map((email) => (
                                                 <MenuItem
-                                                    key={email}
-                                                    value={email}
+                                                    key={email.emailId}
+                                                    value={email.emailId}
                                                 >
-                                                    {email}
+                                                    {email.emailId}
                                                 </MenuItem>
                                             ))}
                                         </Select>
@@ -152,6 +149,7 @@ export default function Creategroup() {
                                             labelId="demo-simple-select-label"
                                             id="demo-simple-select"
                                             label="Currency"
+                                            defaultValue='INR'
                                             {...getFieldProps('groupCurrency')}
                                         >
                                             <MenuItem value={'INR'}>₹ INR</MenuItem>

@@ -2,6 +2,7 @@ const model = require('../model/schema')
 const validator = require('../helper/validation');
 const logger = require('../helper/logger');
 const gorupDAO = require('./group')
+const sendEmail = require('./mailer');
 
 /*
 Add Expense function
@@ -14,7 +15,7 @@ Accepts: Group ID not null group ID exist in the DB
          Auto-Generate Expense ID - Auto generated and stored in the database
 */
 
-exports.addExpense = async (req, res) => {
+exports.addExpense = async(req, res) => {
     try {
         var expense = req.body;
         var group = await model.Group.findOne({
@@ -52,6 +53,13 @@ exports.addExpense = async (req, res) => {
             //New expense is created now we need to update the split values present in the group 
             var update_response = await gorupDAO.addSplit(expense.groupId, expense.expenseAmount, expense.expenseOwner, expense.expenseMembers)
 
+            // Send email notification
+            await sendEmail(expense.expenseMembers, 'Expense Created Successfully', 'notification', {
+                name: 'SplitApp User',
+                subject: 'Expense Created Successfully',
+                message: `Hello Members, an expense ${expense.expenseName} of ₹ ${expense.expenseAmount} has been created for ${expense.expenseDescription}.`
+            });
+
             res.status(200).json({
                 status: "Success",
                 message: "New expenses added",
@@ -77,7 +85,7 @@ Accepts: Group ID not null group ID exist in the DB
          Expense Owner - not null --member in the DB
          Expense Members not null members in the DB
 */
-exports.editExpense = async (req, res) => {
+exports.editExpense = async(req, res) => {
     try {
         var expense = req.body
         var oldExpense = await model.Expense.findOne({
@@ -94,7 +102,7 @@ exports.editExpense = async (req, res) => {
         if (validator.notNull(expense.expenseName) &&
             validator.notNull(expense.expenseAmount) &&
             validator.notNull(expense.expenseOwner) &&
-            validator.notNull(expense.expenseMembers)&& 
+            validator.notNull(expense.expenseMembers) &&
             validator.notNull(expense.expenseDate)) {
             var ownerValidation = await validator.groupUserValidation(expense.expenseOwner, expense.groupId)
             if (!ownerValidation) {
@@ -132,6 +140,13 @@ exports.editExpense = async (req, res) => {
             await gorupDAO.clearSplit(oldExpense.groupId, oldExpense.expenseAmount, oldExpense.expenseOwner, oldExpense.expenseMembers)
             await gorupDAO.addSplit(expense.groupId, expense.expenseAmount, expense.expenseOwner, expense.expenseMembers)
 
+            // Send email notification
+            await sendEmail(oldExpense.expenseMembers, 'Expense Edited Successfully', 'notification', {
+                name: 'SplitApp User',
+                subject: 'Expense Edited Successfully',
+                message: `Hello Members, an expense ${oldExpense.expenseName} of ₹ ${oldExpense.expenseAmount} has been update to name ${expense.expenseName} & toatal amount is ${expense.expenseAmount}.`
+            });
+
             res.status(200).json({
                 status: "Success",
                 message: "Expense Edited",
@@ -152,7 +167,7 @@ This function is used to deted the expense added to the group
 Accepts: Group ID not null group ID exist in the DB 
          Expense ID not null expense ID exist in the DB for the perticular group
 */
-exports.deleteExpense = async (req, res) => {
+exports.deleteExpense = async(req, res) => {
     try {
         var expense = await model.Expense.findOne({
             _id: req.body.id
@@ -168,6 +183,13 @@ exports.deleteExpense = async (req, res) => {
 
         //Clearing split value for the deleted expense from group table
         await gorupDAO.clearSplit(expense.groupId, expense.expenseAmount, expense.expenseOwner, expense.expenseMembers)
+
+        // Send email notification
+        await sendEmail(expense.expenseMembers, 'Expense Deleted Successfully', 'notification', {
+            name: 'SplitApp User',
+            subject: 'Expense Deleted Successfully',
+            message: `Hello Members, an expense ${expense.expenseName} of ₹ ${expense.expenseAmount} has been deleted.`
+        });
 
         res.status(200).json({
             status: "Success",
@@ -190,7 +212,7 @@ Accepts: Expense Id
 Returns: Json with the expense details
 */
 
-exports.viewExpense = async (req, res) => {
+exports.viewExpense = async(req, res) => {
     try {
         var expense = await model.Expense.findOne({
             _id: req.body.id
@@ -218,7 +240,7 @@ This function is used to view all the group expense
 Accepts: Group Id
 Returns: Json with all the expense record and the total expense amount for the group
 */
-exports.viewGroupExpense = async (req, res) => {
+exports.viewGroupExpense = async(req, res) => {
     try {
         var groupExpense = await model.Expense.find({
             groupId: req.body.id
@@ -254,7 +276,7 @@ This function is used to find all the expense a user is involved in
 Accepts user email Id
 returns: Expenses
 */
-exports.viewUserExpense = async (req, res) => {
+exports.viewUserExpense = async(req, res) => {
     try {
         validator.notNull(req.body.user)
         var userExpense = await model.Expense.find({
@@ -291,7 +313,7 @@ This function is used to return the latest 5 expenses a user is involved in
 Accepts : user email id - check in db if user is present 
 Returns : top 5 most resent expense user is a expenseMember in all the groups  
 */
-exports.recentUserExpenses = async (req, res) => {
+exports.recentUserExpenses = async(req, res) => {
     try {
         var recentExpense = await model.Expense.find({
             expenseMembers: req.body.user
@@ -322,7 +344,7 @@ This function is used to retuen the expense spend on each category in a group
 Accepts : groupID 
 Returns : Each category total exp (group as whole)
 */
-exports.groupCategoryExpense = async (req, res) => {
+exports.groupCategoryExpense = async(req, res) => {
     try {
         var categoryExpense = await model.Expense.aggregate([{
                 $match: {
@@ -336,7 +358,7 @@ exports.groupCategoryExpense = async (req, res) => {
                         $sum: "$expenseAmount"
                     }
                 }
-            },{ $sort : {"_id" : 1 } }
+            }, { $sort: { "_id": 1 } }
         ])
 
         res.status(200).json({
@@ -358,7 +380,7 @@ This function is used to get the monthly amount spend in a group
 Accepts : group Id 
 Returns : Expense per month (current year)
 */
-exports.groupMonthlyExpense = async (req, res) => {
+exports.groupMonthlyExpense = async(req, res) => {
     try {
         var monthlyExpense = await model.Expense.aggregate([{
                 $match: {
@@ -380,7 +402,7 @@ exports.groupMonthlyExpense = async (req, res) => {
                     }
                 }
             },
-            { $sort : {"_id.month" : 1 } }
+            { $sort: { "_id.month": 1 } }
         ])
         res.status(200).json({
             status: "success",
@@ -396,19 +418,21 @@ exports.groupMonthlyExpense = async (req, res) => {
 
 
 new Date(new Date().setMonth(new Date().getMonth() - 5))
-/*
-Group Daily Expense Function 
-This function is used to get the dailyly amount spend in a group 
-Accepts : group Id 
-Returns : Expense per day (current year)
-*/
-exports.groupDailyExpense = async (req, res) => {
+    /*
+    Group Daily Expense Function 
+    This function is used to get the dailyly amount spend in a group 
+    Accepts : group Id 
+    Returns : Expense per day (current year)
+    */
+exports.groupDailyExpense = async(req, res) => {
     try {
         var dailyExpense = await model.Expense.aggregate([{
-                $match: { groupId: req.body.id,
-                expenseDate: {
-                    $gte: new Date(new Date().setMonth(new Date().getMonth() - 1)), 
-                    $lte: new Date()}             
+                $match: {
+                    groupId: req.body.id,
+                    expenseDate: {
+                        $gte: new Date(new Date().setMonth(new Date().getMonth() - 1)),
+                        $lte: new Date()
+                    }
                 }
             },
             {
@@ -429,7 +453,7 @@ exports.groupDailyExpense = async (req, res) => {
                     }
                 }
             },
-            { $sort : {"_id.month" :1, "_id.date" : 1  } }
+            { $sort: { "_id.month": 1, "_id.date": 1 } }
         ])
         res.status(200).json({
             status: "success",
@@ -452,7 +476,7 @@ This function is used to retuen the expense spend on each category for a user
 Accepts : emailID
 Returns : Each category total exp (individaul Expense)
 */
-exports.userCategoryExpense = async (req, res) => {
+exports.userCategoryExpense = async(req, res) => {
     try {
         var categoryExpense = await model.Expense.aggregate([{
                 $match: {
@@ -466,7 +490,7 @@ exports.userCategoryExpense = async (req, res) => {
                         $sum: "$expensePerMember"
                     }
                 }
-            },{ $sort : {"_id" : 1 } }
+            }, { $sort: { "_id": 1 } }
         ])
 
         res.status(200).json({
@@ -488,7 +512,7 @@ This function is used to get the monthly amount spend by a user
 Accepts : Email Id 
 Returns : Expense per month
 */
-exports.userMonthlyExpense = async (req, res) => {
+exports.userMonthlyExpense = async(req, res) => {
     try {
         var monthlyExpense = await model.Expense.aggregate([{
                 $match: {
@@ -510,7 +534,7 @@ exports.userMonthlyExpense = async (req, res) => {
                     }
                 }
             },
-            { $sort : {"_id.month" : 1 } }
+            { $sort: { "_id.month": 1 } }
         ])
         res.status(200).json({
             status: "success",
@@ -531,14 +555,15 @@ This function is used to get the daily amount spend by a user
 Accepts : Email Id 
 Returns : Expense per month
 */
-exports.userDailyExpense = async (req, res) => {
+exports.userDailyExpense = async(req, res) => {
     try {
         var dailyExpense = await model.Expense.aggregate([{
                 $match: {
                     expenseMembers: req.body.user,
                     expenseDate: {
-                        $gte: new Date(new Date().setMonth(new Date().getMonth() - 1)), 
-                        $lte: new Date()}
+                        $gte: new Date(new Date().setMonth(new Date().getMonth() - 1)),
+                        $lte: new Date()
+                    }
                 }
             },
             {
@@ -559,7 +584,7 @@ exports.userDailyExpense = async (req, res) => {
                     }
                 }
             },
-            { $sort : {"_id.month" :1, "_id.date" : 1  } }
+            { $sort: { "_id.month": 1, "_id.date": 1 } }
         ])
         res.status(200).json({
             status: "success",

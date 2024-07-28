@@ -7,7 +7,6 @@ import dataConfig from '../../config.json';
 import ContactCards from "./contactCards";
 
 const profile = JSON.parse(localStorage.getItem('profile'))
-const emailId = profile?.emailId
 
 export default function Contacts() {
   const [loading, setLoading] = useState(false);

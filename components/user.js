@@ -39,10 +39,10 @@ exports.userReg = async(req, res) => {
                 var id = await model.User.create(newUser)
 
                 // Send email notification
-                await sendEmail(newUser.emailId, 'You are on now Split App!', 'notification', {
+                await sendEmail([newUser.emailId], 'You are on now Split App!', 'notification', {
                     name: newUser.firstName,
                     subject: 'Welcome to Split App!',
-                    message: `Hi, ${newUser.firstName} great to have you onboarded.`
+                    message: `Thank you for signing up, ${newUser.firstName}! We're excited to have you on board.`
                 });
 
                 res.status(200).json({
@@ -85,6 +85,14 @@ exports.userLogin = async(req, res) => {
             throw err
         } else {
             const accessToken = apiAuth.generateAccessToken(req.body.emailId)
+
+            // Send email notification
+            await sendEmail([user.emailId], 'Logged In Split App!', 'notification', {
+                name: user.firstName,
+                subject: 'Login Successful!',
+                message: `Hi ${user.firstName}, you have successfully logged in.`
+            });
+
             res.status(200).json({
                 status: "Success",
                 message: "User Login Success",
@@ -289,6 +297,15 @@ exports.updatePassword = async(req, res) => {
                 password: hash_password
             }
         })
+
+        // Send email notification
+        await sendEmail([emailId], 'Password Changed Successfully', 'notification', {
+            name: user.firstName,
+            subject: 'Password Changed Successfully !',
+            message: `Hello ${user.firstName}, your password has been changed successfully.`
+        });
+
+
         res.status(200).json({
             status: "Success",
             message: "Password update Success",
@@ -344,6 +361,14 @@ exports.addFriend = async(req, res) => {
         });
 
         const friendship_response = await friendship.save();
+
+        // Send email notification
+        await sendEmail([userEmail, friendEmail], 'You have a new friend!', 'notification', {
+            name: friend.firstName,
+            subject: 'New Friend Added!',
+            message: `${user.firstName} ${user.lastName} has added you as a friend.`
+        });
+
         res.status(201).json({
             status: "Success",
             message: "Friend added",
