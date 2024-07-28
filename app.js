@@ -5,7 +5,7 @@ var requestLogger = require('./helper/requestLogger')
 var apiAuth = require('./helper/apiAuthentication')
 var cors = require('cors')
 
-const env = process.env.NODE_ENV || 'staging'
+const env = process.env.NODE_ENV || 'local'
 
 const path = require('path');
 dotenv.config()
